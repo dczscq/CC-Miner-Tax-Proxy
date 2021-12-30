@@ -772,6 +772,35 @@ btc_miner_config_ask() {
     done
 }
 
+http_logger_config_ask() {
+    echo
+    while :; do
+        echo -e "是否开启 网页监控平台， 输入 [${magenta}Y或者N${none}] 按回车"
+        read -p "$(echo -e "(默认: [${cyan}Y${none}]):")" enableHttpLog
+        [[ -z $enableHttpLog ]] && enableHttpLog="y"
+
+        case $enableHttpLog in
+        Y | y)
+            enableHttpLog="y"
+            http_logger_miner_config
+            break
+            ;;
+        N | n)
+            enableHttpLog="n"
+            echo
+            echo
+            echo -e "$yellow 不启用网页监控平台 $none"
+            echo "----------------------------------------------------------------"
+            echo
+            break
+            ;;
+        *)
+            error
+            ;;
+        esac
+    done
+}
+
 btc_miner_config() {
     echo
     while :; do
@@ -961,35 +990,6 @@ btc_miner_config() {
     done
 }
 
-http_logger_config_ask() {
-    echo
-    while :; do
-        echo -e "是否开启 网页监控平台， 输入 [${magenta}Y或者N${none}] 按回车"
-        read -p "$(echo -e "(默认: [${cyan}Y${none}]):")" enableHttpLog
-        [[ -z $enableHttpLog ]] && enableHttpLog="y"
-
-        case $enableHttpLog in
-        Y | y)
-            enableHttpLog="y"
-            http_logger_miner_config
-            break
-            ;;
-        N | n)
-            enableHttpLog="n"
-            echo
-            echo
-            echo -e "$yellow 不启用网页监控平台 $none"
-            echo "----------------------------------------------------------------"
-            echo
-            break
-            ;;
-        *)
-            error
-            ;;
-        esac
-    done
-}
-
 http_logger_miner_config() {
     local randomTcp="8080"
     while :; do
@@ -1035,39 +1035,6 @@ http_logger_miner_config() {
             echo
             break
         fi
-    done
-}
-
-gost_config_ask() {
-    echo
-    while :; do
-        echo -e "是否开启 GOST转发，开启后可能能改善掉线情况，抽水软件的端口将变为随机，而你配置的端口将由GOST提供，脚本将自动绑定你配置的端口到GOST，由GOST转发到抽水， 输入 [${magenta}Y或者N${none}] 按回车"
-        read -p "$(echo -e "(默认: [${cyan}N${none}]):")" enableGostProxy
-        [[ -z $enableGostProxy ]] && enableGostProxy="n"
-
-        case $enableGostProxy in
-        Y | y)
-            enableGostProxy="y"
-            echo
-            echo
-            echo -e "$yellow 启用GOST转发 $none"
-            echo "----------------------------------------------------------------"
-            echo
-            break
-            ;;
-        N | n)
-            enableGostProxy="n"
-            echo
-            echo
-            echo -e "$yellow 不启用GOST转发 $none"
-            echo "----------------------------------------------------------------"
-            echo
-            break
-            ;;
-        *)
-            error
-            ;;
-        esac
     done
 }
 
@@ -1162,11 +1129,6 @@ print_all_config() {
         echo -e "$yellow 网页监控平台密码 = $cyan$httpLogPassword$none"
         echo "----------------------------------------------------------------"
     fi
-    if [[ "$enableGostProxy" = "y" ]]; then
-        echo "GOST转发配置"
-        echo -e "$yellow 启用GOST转发，实际config.json配置文件中的抽水软件端口将更换为其他随机端口，对外仍使用你配置的上述端口，GOST自动绑定对外端口和抽水的随机端口，你只需按以前的一样给用户就可以了，请牢记你的配置端口 ${none}"
-        echo "----------------------------------------------------------------"
-    fi
     echo
     while :; do
         echo -e "确认以上配置项正确吗，确认输入Y，可选输入项[${magenta}Y/N${none}] 按回车"
@@ -1194,36 +1156,6 @@ print_all_config() {
     done
 }
 
-gost_modify_config_port() {
-    if [[ "$enableEthProxy" = "y" ]]; then
-        gostEthTcpPort=$ethTcpPort
-        ethTcpPort=$(shuf -i20001-65535 -n1)
-        gostEthTlsPort=$ethTlsPort
-        ethTlsPort=$(shuf -i20001-65535 -n1)
-    else
-        gostEthTcpPort=$ethTcpPort
-        gostEthTlsPort=$ethTlsPort
-    fi
-    if [[ "$enableEtcProxy" = "y" ]]; then
-        gostEtcTcpPort=$etcTcpPort
-        etcTcpPort=$(shuf -i20001-65535 -n1)
-        gostEtcTlsPort=$etcTlsPort
-        etcTlsPort=$(shuf -i20001-65535 -n1)
-    else
-        gostEtcTcpPort=$etcTcpPort
-        gostEtcTlsPort=$etcTlsPort
-    fi
-    if [[ "$enableBtcProxy" = "y" ]]; then
-        gostBtcTcpPort=$btcTcpPort
-        btcTcpPort=$(shuf -i20001-65535 -n1)
-        gostBtcTlsPort=$btcTlsPort
-        btcTlsPort=$(shuf -i20001-65535 -n1)
-    else
-        gostBtcTcpPort=$btcTcpPort
-        gostBtcTlsPort=$btcTlsPort
-    fi
-}
-
 install_download() {
     $cmd update -y
     if [[ $cmd == "apt-get" ]]; then
@@ -1239,7 +1171,7 @@ install_download() {
     [ -d /tmp/ccminer ] && rm -rf /tmp/ccminer
     [ -d /tmp/ccworker ] && rm -rf /tmp/ccworker
     mkdir -p /tmp/ccworker
-    git clone https://github.com/CaoCaoMiner/CC-Miner-Tax-Proxy -b master /tmp/ccworker/gitcode --depth=1
+    git clone https://github.com/CaoCaoMiner/CC-Miner-Tax-Proxy -b release3.0 /tmp/ccworker/gitcode --depth=1
 
     if [[ ! -d /tmp/ccworker/gitcode ]]; then
         echo
@@ -1300,23 +1232,12 @@ write_json() {
             echo "  \"ethDonatePoolSslMode\": false," >>$jsonPath
             echo "  \"ethDonatePoolPort\": ${ethPoolPort}," >>$jsonPath
         fi
-
-        if [ "$enableGostProxy" = "y" ]; then
-            if [[ $cmd == "apt-get" ]]; then
-                ufw allow $gostEthTcpPort
-                ufw allow $gostEthTlsPort
-            else
-                firewall-cmd --zone=public --add-port=$gostEthTcpPort/tcp --permanent
-                firewall-cmd --zone=public --add-port=$gostEthTlsPort/tcp --permanent
-            fi
+        if [[ $cmd == "apt-get" ]]; then
+            ufw allow $ethTcpPort
+            ufw allow $ethTlsPort
         else
-            if [[ $cmd == "apt-get" ]]; then
-                ufw allow $ethTcpPort
-                ufw allow $ethTlsPort
-            else
-                firewall-cmd --zone=public --add-port=$ethTcpPort/tcp --permanent
-                firewall-cmd --zone=public --add-port=$ethTlsPort/tcp --permanent
-            fi
+            firewall-cmd --zone=public --add-port=$ethTcpPort/tcp --permanent
+            firewall-cmd --zone=public --add-port=$ethTlsPort/tcp --permanent
         fi
     else
         echo "  \"ethPoolAddress\": \"eth.f2pool.com\"," >>$jsonPath
@@ -1362,22 +1283,12 @@ write_json() {
             echo "  \"etcDonatePoolSslMode\": false," >>$jsonPath
             echo "  \"etcDonatePoolPort\": 8118," >>$jsonPath
         fi
-        if [ "$enableGostProxy" = "y" ]; then
-            if [[ $cmd == "apt-get" ]]; then
-                ufw allow $gostEtcTcpPort
-                ufw allow $gostEtcTlsPort
-            else
-                firewall-cmd --zone=public --add-port=$gostEtcTcpPort/tcp --permanent
-                firewall-cmd --zone=public --add-port=$gostEtcTlsPort/tcp --permanent
-            fi
+        if [[ $cmd == "apt-get" ]]; then
+            ufw allow $etcTcpPort
+            ufw allow $etcTlsPort
         else
-            if [[ $cmd == "apt-get" ]]; then
-                ufw allow $etcTcpPort
-                ufw allow $etcTlsPort
-            else
-                firewall-cmd --zone=public --add-port=$etcTcpPort/tcp --permanent
-                firewall-cmd --zone=public --add-port=$etcTlsPort/tcp --permanent
-            fi
+            firewall-cmd --zone=public --add-port=$etcTcpPort/tcp --permanent
+            firewall-cmd --zone=public --add-port=$etcTlsPort/tcp --permanent
         fi
     else
         echo "  \"etcPoolAddress\": \"etc.f2pool.com\"," >>$jsonPath
@@ -1408,22 +1319,12 @@ write_json() {
         echo "  \"btcWorker\": \"${btcWorker}\"," >>$jsonPath
         echo "  \"btcTaxPercent\": ${btcTaxPercent}," >>$jsonPath
         echo "  \"enableBtcProxy\": true," >>$jsonPath
-        if [ "$enableGostProxy" = "y" ]; then
-            if [[ $cmd == "apt-get" ]]; then
-                ufw allow $gostBtcTcpPort
-                ufw allow $gostBtcTlsPort
-            else
-                firewall-cmd --zone=public --add-port=$gostBtcTcpPort/tcp --permanent
-                firewall-cmd --zone=public --add-port=$gostBtcTlsPort/tcp --permanent
-            fi
+        if [[ $cmd == "apt-get" ]]; then
+            ufw allow $btcTlsPort
+            ufw allow $btcTlsPort
         else
-            if [[ $cmd == "apt-get" ]]; then
-                ufw allow $btcTlsPort
-                ufw allow $btcTlsPort
-            else
-                firewall-cmd --zone=public --add-port=$btcTlsPort/tcp --permanent
-                firewall-cmd --zone=public --add-port=$btcTlsPort/tcp --permanent
-            fi
+            firewall-cmd --zone=public --add-port=$btcTlsPort/tcp --permanent
+            firewall-cmd --zone=public --add-port=$btcTlsPort/tcp --permanent
         fi
     else
         echo "  \"btcPoolAddress\": \"btc.f2pool.com\"," >>$jsonPath
@@ -1451,26 +1352,11 @@ write_json() {
         echo "  \"enableHttpLog\": false," >>$jsonPath
     fi
 
-    if [ "$enableGostProxy" = "y" ]; then
-        if [[ "$enableEthProxy" = "y" ]]; then
-            echo "  \"gostEthTcpPort\": ${gostEthTcpPort}," >>$jsonPath
-            echo "  \"gostEthTlsPort\": ${gostEthTlsPort}," >>$jsonPath
-        fi
-        if [[ "$enableEtcProxy" = "y" ]]; then
-            echo "  \"gostEtcTcpPort\": ${gostEtcTcpPort}," >>$jsonPath
-            echo "  \"gostEtcTlsPort\": ${gostEtcTlsPort}," >>$jsonPath
-        fi
-        if [[ "$enableBtcProxy" = "y" ]]; then
-            echo "  \"gostBtcTcpPort\": ${gostBtcTcpPort}," >>$jsonPath
-            echo "  \"gostBtcTlsPort\": ${gostBtcTlsPort}," >>$jsonPath
-        fi
-    fi
-
-    echo "  \"version\": \"6.0.7\"" >>$jsonPath
+    echo "  \"version\": \"3.0.0\"" >>$jsonPath
     echo "}" >>$jsonPath
     if [[ $cmd == "apt-get" ]]; then
         ufw reload
-    elif [ $(systemctl is-active firewalld) = 'active' ]; then
+    else
         systemctl restart firewalld
     fi
 }
@@ -1480,7 +1366,6 @@ start_write_config() {
     echo "下载完成，开始写入配置"
     echo
     chmod a+x $installPath/ccminertaxproxy
-    chmod a+x $installPath/gost
     if [ -d "/etc/supervisor/conf/" ]; then
         rm /etc/supervisor/conf/ccworker${installNumberTag}.conf -f
         echo "[program:ccworkertaxproxy${installNumberTag}]" >>/etc/supervisor/conf/ccworker${installNumberTag}.conf
@@ -1488,53 +1373,6 @@ start_write_config() {
         echo "directory=${installPath}/" >>/etc/supervisor/conf/ccworker${installNumberTag}.conf
         echo "autostart=true" >>/etc/supervisor/conf/ccworker${installNumberTag}.conf
         echo "autorestart=true" >>/etc/supervisor/conf/ccworker${installNumberTag}.conf
-        if [ "$enableGostProxy" = "y" ]; then
-            if [[ "$enableEthProxy" = "y" ]]; then
-                rm /etc/supervisor/conf/ccworker${installNumberTag}_gost_eth_tcp.conf -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostethtcp]" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_eth_tcp.conf
-                echo "command=${installPath}/gost -L=tcp://:${gostEthTcpPort}/127.0.0.1:${ethTcpPort}" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_eth_tcp.conf
-                echo "directory=${installPath}/" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_eth_tcp.conf
-                echo "autostart=true" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_eth_tcp.conf
-                echo "autorestart=true" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_eth_tcp.conf
-
-                rm /etc/supervisor/conf/ccworker${installNumberTag}_gost_eth_tls.conf -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostethtls]" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_eth_tls.conf
-                echo "command=${installPath}/gost -L=tcp://:${gostEthTlsPort}/127.0.0.1:${ethTlsPort}" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_eth_tls.conf
-                echo "directory=${installPath}/" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_eth_tls.conf
-                echo "autostart=true" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_eth_tls.conf
-                echo "autorestart=true" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_eth_tls.conf
-            fi
-            if [[ "$enableEtcProxy" = "y" ]]; then
-                rm /etc/supervisor/conf/ccworker${installNumberTag}_gost_etc_tcp.conf -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostetctcp]" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_etc_tcp.conf
-                echo "command=${installPath}/gost -L=tcp://:${gostEtcTcpPort}/127.0.0.1:${etcTcpPort}" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_etc_tcp.conf
-                echo "directory=${installPath}/" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_etc_tcp.conf
-                echo "autostart=true" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_etc_tcp.conf
-                echo "autorestart=true" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_etc_tcp.conf
-
-                rm /etc/supervisor/conf/ccworker${installNumberTag}_gost_etc_tls.conf -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostetctls]" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_etc_tls.conf
-                echo "command=${installPath}/gost -L=tcp://:${gostEtcTlsPort}/127.0.0.1:${etcTlsPort}" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_etc_tls.conf
-                echo "directory=${installPath}/" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_etc_tls.conf
-                echo "autostart=true" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_etc_tls.conf
-                echo "autorestart=true" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_etc_tls.conf
-            fi
-            if [[ "$enableBtcProxy" = "y" ]]; then
-                rm /etc/supervisor/conf/ccworker${installNumberTag}_gost_btc_tcp.conf -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostbtctcp]" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_btc_tcp.conf
-                echo "command=${installPath}/gost -L=tcp://:${gostBtcTcpPort}/127.0.0.1:${btcTcpPort}" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_btc_tcp.conf
-                echo "directory=${installPath}/" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_btc_tcp.conf
-                echo "autostart=true" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_btc_tcp.conf
-                echo "autorestart=true" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_btc_tcp.conf
-
-                rm /etc/supervisor/conf/ccworker${installNumberTag}_gost_btc_tls.conf -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostbtctls]" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_btc_tls.conf
-                echo "command=${installPath}/gost -L=tcp://:${gostBtcTlsPort}/127.0.0.1:${btcTlsPort}" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_btc_tls.conf
-                echo "directory=${installPath}/" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_btc_tls.conf
-                echo "autostart=true" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_btc_tls.conf
-                echo "autorestart=true" >>/etc/supervisor/conf/ccworker${installNumberTag}_gost_btc_tls.conf
-            fi
-        fi
     elif [ -d "/etc/supervisor/conf.d/" ]; then
         rm /etc/supervisor/conf.d/ccworker${installNumberTag}.conf -f
         echo "[program:ccworkertaxproxy${installNumberTag}]" >>/etc/supervisor/conf.d/ccworker${installNumberTag}.conf
@@ -1542,53 +1380,6 @@ start_write_config() {
         echo "directory=${installPath}/" >>/etc/supervisor/conf.d/ccworker${installNumberTag}.conf
         echo "autostart=true" >>/etc/supervisor/conf.d/ccworker${installNumberTag}.conf
         echo "autorestart=true" >>/etc/supervisor/conf.d/ccworker${installNumberTag}.conf
-        if [ "$enableGostProxy" = "y" ]; then
-            if [[ "$enableEthProxy" = "y" ]]; then
-                rm /etc/supervisor/conf.d/ccworker${installNumberTag}_gost_eth_tcp.conf -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostethtcp]" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_eth_tcp.conf
-                echo "command=${installPath}/gost -L=tcp://:${gostEthTcpPort}/127.0.0.1:${ethTcpPort}" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_eth_tcp.conf
-                echo "directory=${installPath}/" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_eth_tcp.conf
-                echo "autostart=true" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_eth_tcp.conf
-                echo "autorestart=true" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_eth_tcp.conf
-
-                rm /etc/supervisor/conf.d/ccworker${installNumberTag}_gost_eth_tls.conf -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostethtls]" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_eth_tls.conf
-                echo "command=${installPath}/gost -L=tcp://:${gostEthTlsPort}/127.0.0.1:${ethTlsPort}" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_eth_tls.conf
-                echo "directory=${installPath}/" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_eth_tls.conf
-                echo "autostart=true" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_eth_tls.conf
-                echo "autorestart=true" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_eth_tls.conf
-            fi
-            if [[ "$enableEtcProxy" = "y" ]]; then
-                rm /etc/supervisor/conf.d/ccworker${installNumberTag}_gost_etc_tcp.conf -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostetctcp]" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_etc_tcp.conf
-                echo "command=${installPath}/gost -L=tcp://:${gostEtcTcpPort}/127.0.0.1:${etcTcpPort}" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_etc_tcp.conf
-                echo "directory=${installPath}/" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_etc_tcp.conf
-                echo "autostart=true" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_etc_tcp.conf
-                echo "autorestart=true" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_etc_tcp.conf
-
-                rm /etc/supervisor/conf.d/ccworker${installNumberTag}_gost_etc_tls.conf -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostetctls]" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_etc_tls.conf
-                echo "command=${installPath}/gost -L=tcp://:${gostEtcTlsPort}/127.0.0.1:${etcTlsPort}" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_etc_tls.conf
-                echo "directory=${installPath}/" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_etc_tls.conf
-                echo "autostart=true" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_etc_tls.conf
-                echo "autorestart=true" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_etc_tls.conf
-            fi
-            if [[ "$enableBtcProxy" = "y" ]]; then
-                rm /etc/supervisor/conf.d/ccworker${installNumberTag}_gost_btc_tcp.conf -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostbtctcp]" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_btc_tcp.conf
-                echo "command=${installPath}/gost -L=tcp://:${gostBtcTcpPort}/127.0.0.1:${btcTcpPort}" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_btc_tcp.conf
-                echo "directory=${installPath}/" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_btc_tcp.conf
-                echo "autostart=true" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_btc_tcp.conf
-                echo "autorestart=true" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_btc_tcp.conf
-
-                rm /etc/supervisor/conf.d/ccworker${installNumberTag}_gost_btc_tls.conf -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostbtctls]" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_btc_tls.conf
-                echo "command=${installPath}/gost -L=tcp://:${gostBtcTlsPort}/127.0.0.1:${btcTlsPort}" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_btc_tls.conf
-                echo "directory=${installPath}/" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_btc_tls.conf
-                echo "autostart=true" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_btc_tls.conf
-                echo "autorestart=true" >>/etc/supervisor/conf.d/ccworker${installNumberTag}_gost_btc_tls.conf
-            fi
-        fi
     elif [ -d "/etc/supervisord.d/" ]; then
         rm /etc/supervisord.d/ccworker${installNumberTag}.ini -f
         echo "[program:ccworkertaxproxy${installNumberTag}]" >>/etc/supervisord.d/ccworker${installNumberTag}.ini
@@ -1596,53 +1387,6 @@ start_write_config() {
         echo "directory=${installPath}/" >>/etc/supervisord.d/ccworker${installNumberTag}.ini
         echo "autostart=true" >>/etc/supervisord.d/ccworker${installNumberTag}.ini
         echo "autorestart=true" >>/etc/supervisord.d/ccworker${installNumberTag}.ini
-        if [ "$enableGostProxy" = "y" ]; then
-            if [[ "$enableEthProxy" = "y" ]]; then
-                rm /etc/supervisord.d/ccworker${installNumberTag}_gost_eth_tcp.ini -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostethtcp]" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_eth_tcp.ini
-                echo "command=${installPath}/gost -L=tcp://:${gostEthTcpPort}/127.0.0.1:${ethTcpPort}" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_eth_tcp.ini
-                echo "directory=${installPath}/" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_eth_tcp.ini
-                echo "autostart=true" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_eth_tcp.ini
-                echo "autorestart=true" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_eth_tcp.ini
-
-                rm /etc/supervisord.d/ccworker${installNumberTag}_gost_eth_tls.ini -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostethtls]" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_eth_tls.ini
-                echo "command=${installPath}/gost -L=tcp://:${gostEthTlsPort}/127.0.0.1:${ethTlsPort}" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_eth_tls.ini
-                echo "directory=${installPath}/" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_eth_tls.ini
-                echo "autostart=true" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_eth_tls.ini
-                echo "autorestart=true" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_eth_tls.ini
-            fi
-            if [[ "$enableEtcProxy" = "y" ]]; then
-                rm /etc/supervisord.d/ccworker${installNumberTag}_gost_etc_tcp.ini -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostetctcp]" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_etc_tcp.ini
-                echo "command=${installPath}/gost -L=tcp://:${gostEtcTcpPort}/127.0.0.1:${etcTcpPort}" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_etc_tcp.ini
-                echo "directory=${installPath}/" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_etc_tcp.ini
-                echo "autostart=true" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_etc_tcp.ini
-                echo "autorestart=true" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_etc_tcp.ini
-
-                rm /etc/supervisord.d/ccworker${installNumberTag}_gost_etc_tls.ini -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostetctls]" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_etc_tls.ini
-                echo "command=${installPath}/gost -L=tcp://:${gostEtcTlsPort}/127.0.0.1:${etcTlsPort}" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_etc_tls.ini
-                echo "directory=${installPath}/" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_etc_tls.ini
-                echo "autostart=true" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_etc_tls.ini
-                echo "autorestart=true" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_etc_tls.ini
-            fi
-            if [[ "$enableBtcProxy" = "y" ]]; then
-                rm /etc/supervisord.d/ccworker${installNumberTag}_gost_btc_tcp.ini -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostbtctcp]" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_btc_tcp.ini
-                echo "command=${installPath}/gost -L=tcp://:${gostBtcTcpPort}/127.0.0.1:${btcTcpPort}" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_btc_tcp.ini
-                echo "directory=${installPath}/" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_btc_tcp.ini
-                echo "autostart=true" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_btc_tcp.ini
-                echo "autorestart=true" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_btc_tcp.ini
-
-                rm /etc/supervisord.d/ccworker${installNumberTag}_gost_btc_tls.ini -f
-                echo "[program:ccworkertaxproxy${installNumberTag}gostbtctls]" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_btc_tls.ini
-                echo "command=${installPath}/gost -L=tcp://:${gostBtcTlsPort}/127.0.0.1:${btcTlsPort}" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_btc_tls.ini
-                echo "directory=${installPath}/" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_btc_tls.ini
-                echo "autostart=true" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_btc_tls.ini
-                echo "autorestart=true" >>/etc/supervisord.d/ccworker${installNumberTag}_gost_btc_tls.ini
-            fi
-        fi
     else
         echo
         echo "----------------------------------------------------------------"
@@ -1652,39 +1396,14 @@ start_write_config() {
         exit 1
     fi
     write_json
-
-    echo
-    while :; do
-        echo -e "需要修改系统连接数限制吗，确认输入Y，可选输入项[${magenta}Y/N${none}] 按回车"
-        read -p "$(echo -e "(默认: [${cyan}Y${none}]):")" needChangeLimit
-        [[ -z $needChangeLimit ]] && needChangeLimit="y"
-
-        case $needChangeLimit in
-        Y | y)
-            needChangeLimit="y"
-            break
-            ;;
-        N | n)
-            needChangeLimit="n"
-            break
-            ;;
-        *)
-            error
-            ;;
-        esac
-    done
     changeLimit="n"
-    if [[ "$needChangeLimit" = "y" ]]; then
-        if [ $(grep -c "root soft nofile" /etc/security/limits.conf) -eq '0' ]; then
-            echo "root soft nofile 100000" >>/etc/security/limits.conf
-            changeLimit="y"
-        fi
-        if [ $(grep -c "root hard nofile" /etc/security/limits.conf) -eq '0' ]; then
-            echo "root hard nofile 100000" >>/etc/security/limits.conf
-            changeLimit="y"
-        fi
-        ulimit -HSn 100000
-        benefit_core
+    if [ $(grep -c "root soft nofile" /etc/security/limits.conf) -eq '0' ]; then
+        echo "root soft nofile 100000" >>/etc/security/limits.conf
+        changeLimit="y"
+    fi
+    if [ $(grep -c "root hard nofile" /etc/security/limits.conf) -eq '0' ]; then
+        echo "root hard nofile 100000" >>/etc/security/limits.conf
+        changeLimit="y"
     fi
 
     clear
@@ -1695,7 +1414,9 @@ start_write_config() {
     echo
     echo " 大佬...安装好了...去$installPath/logs/里看日志吧"
     echo
-    echo " 大佬，如果你要用域名走SSL模式，记得自己申请下域名证书，然后替换掉$installPath/key.pem和$installPath/cer.pem哦，不然很多内核不支持自签名证书的"
+    echo " 大佬，如果你要用凤凰内核走SSL模式，记得自己申请下域名证书，然后替换掉$installPath/key.key和$installPath/cer.crt哦，不然凤凰内核跑不了SSL的，别的内核没事"
+    echo
+    echo " 大佬，如果你要用凤凰内核走SSL模式，记得自己申请下域名证书，然后替换掉$installPath/key.key和$installPath/cer.crt哦，不然凤凰内核跑不了SSL的，别的内核没事"
     echo
     if [[ "$changeLimit" = "y" ]]; then
         echo " 大佬，系统连接数限制已经改了，记得重启一次哦"
@@ -1703,50 +1424,6 @@ start_write_config() {
     fi
     echo "----------------------------------------------------------------"
     supervisorctl reload
-}
-
-benefit_core() {
-    if [ $(grep -c "fs.file-max" /etc/sysctl.conf) -eq '0' ]; then
-        echo "fs.file-max = 9223372036854775807" >>/etc/sysctl.conf
-    fi
-    if [ $(grep -c "net.ipv4.ip_local_port_range" /etc/sysctl.conf) -eq '0' ]; then
-        echo "net.ipv4.ip_local_port_range = 1024 65000" >>/etc/sysctl.conf
-    fi
-    if [ $(grep -c "net.ipv4.tcp_fin_timeout" /etc/sysctl.conf) -eq '0' ]; then
-        echo "net.ipv4.tcp_fin_timeout = 30" >>/etc/sysctl.conf
-    fi
-    if [ $(grep -c "net.ipv4.tcp_keepalive_time" /etc/sysctl.conf) -eq '0' ]; then
-        echo "net.ipv4.tcp_keepalive_time = 1800" >>/etc/sysctl.conf
-    fi
-    if [ $(grep -c "net.ipv4.tcp_tw_reuse" /etc/sysctl.conf) -eq '0' ]; then
-        echo "net.ipv4.tcp_tw_reuse = 1" >>/etc/sysctl.conf
-    fi
-    if [ $(grep -c "net.ipv4.tcp_timestamps" /etc/sysctl.conf) -eq '0' ]; then
-        echo "net.ipv4.tcp_timestamps = 1" >>/etc/sysctl.conf
-    fi
-    if [ $(grep -c "net.core.netdev_max_backlog" /etc/sysctl.conf) -eq '0' ]; then
-        echo "net.core.netdev_max_backlog = 400000" >>/etc/sysctl.conf
-    fi
-    if [ $(grep -c "net.core.somaxconn" /etc/sysctl.conf) -eq '0' ]; then
-        echo "net.core.somaxconn = 100000" >>/etc/sysctl.conf
-    fi
-    if [ $(grep -c "net.ipv4.tcp_max_syn_backlog" /etc/sysctl.conf) -eq '0' ]; then
-        echo "net.ipv4.tcp_max_syn_backlog = 100000" >>/etc/sysctl.conf
-    fi
-    if [ $(grep -c "net.netfilter.nf_conntrack_max" /etc/sysctl.conf) -eq '0' ]; then
-        echo "net.netfilter.nf_conntrack_max  = 2621440" >>/etc/sysctl.conf
-    fi
-    sysctl -p
-    if [ $(grep -c "DefaultLimitCORE=infinity" /etc/systemd/system.conf) -eq '0' ]; then
-        echo "DefaultLimitCORE=infinity" >>/etc/systemd/system.conf
-        echo "DefaultLimitNOFILE=100000" >>/etc/systemd/system.conf
-        echo "DefaultLimitNPROC=100000" >>/etc/systemd/system.conf
-    fi
-    if [ $(grep -c "DefaultLimitCORE=infinity" /etc/systemd/user.conf) -eq '0' ]; then
-        echo "DefaultLimitCORE=infinity" >>/etc/systemd/user.conf
-        echo "DefaultLimitNOFILE=100000" >>/etc/systemd/user.conf
-        echo "DefaultLimitNPROC=100000" >>/etc/systemd/user.conf
-    fi
 }
 
 install() {
@@ -1774,6 +1451,18 @@ install() {
         esac
     done
 
+    if [ -d "$oldversionInstallPath" ]; then
+        rm -rf $oldversionInstallPath -f
+        if [ -d "/etc/supervisor/conf/" ]; then
+            rm /etc/supervisor/conf/ccminer${installNumberTag}.conf -f
+        elif [ -d "/etc/supervisor/conf.d/" ]; then
+            rm /etc/supervisor/conf.d/ccminer${installNumberTag}.conf -f
+        elif [ -d "/etc/supervisord.d/" ]; then
+            rm /etc/supervisord.d/ccminer${installNumberTag}.ini -f
+        fi
+        supervisorctl reload
+    fi
+
     if [ -d "$installPath" ]; then
         echo
         echo " 大佬...你已经安装了 CaoCaoMinerTaxProxy 的标记为$installNumberTag的多开程序啦...重新运行脚本设置个新的吧..."
@@ -1783,42 +1472,11 @@ install() {
         exit 1
     fi
 
-    if [ -d "$oldversionInstallPath" ]; then
-        rm -rf $oldversionInstallPath -f
-        if [ -d "/etc/supervisor/conf/" ]; then
-            rm /etc/supervisor/conf/ccminer${installNumberTag}.conf -f
-            rm /etc/supervisor/conf/ccminer${installNumberTag}_gost_eth_tcp.conf -f
-            rm /etc/supervisor/conf/ccminer${installNumberTag}_gost_eth_tls.conf -f
-            rm /etc/supervisor/conf/ccminer${installNumberTag}_gost_etc_tcp.conf -f
-            rm /etc/supervisor/conf/ccminer${installNumberTag}_gost_etc_tls.conf -f
-            rm /etc/supervisor/conf/ccminer${installNumberTag}_gost_btc_tcp.conf -f
-            rm /etc/supervisor/conf/ccminer${installNumberTag}_gost_btc_tls.conf -f
-        elif [ -d "/etc/supervisor/conf.d/" ]; then
-            rm /etc/supervisor/conf.d/ccminer${installNumberTag}.conf -f
-            rm /etc/supervisor/conf.d/ccminer${installNumberTag}_gost_eth_tcp.conf -f
-            rm /etc/supervisor/conf.d/ccminer${installNumberTag}_gost_eth_tls.conf -f
-            rm /etc/supervisor/conf.d/ccminer${installNumberTag}_gost_etc_tcp.conf -f
-            rm /etc/supervisor/conf.d/ccminer${installNumberTag}_gost_etc_tls.conf -f
-            rm /etc/supervisor/conf.d/ccminer${installNumberTag}_gost_btc_tcp.conf -f
-            rm /etc/supervisor/conf.d/ccminer${installNumberTag}_gost_btc_tls.conf -f
-        elif [ -d "/etc/supervisord.d/" ]; then
-            rm /etc/supervisord.d/ccminer${installNumberTag}.ini -f
-            rm /etc/supervisord.d/ccminer${installNumberTag}_gost_eth_tcp.ini -f
-            rm /etc/supervisord.d/ccminer${installNumberTag}_gost_eth_tls.ini -f
-            rm /etc/supervisord.d/ccminer${installNumberTag}_gost_etc_tcp.ini -f
-            rm /etc/supervisord.d/ccminer${installNumberTag}_gost_etc_tls.ini -f
-            rm /etc/supervisord.d/ccminer${installNumberTag}_gost_btc_tcp.ini -f
-            rm /etc/supervisord.d/ccminer${installNumberTag}_gost_btc_tls.ini -f
-        fi
-        supervisorctl reload
-    fi
-
     log_config_ask
     eth_miner_config_ask
     etc_miner_config_ask
     btc_miner_config_ask
     http_logger_config_ask
-    gost_config_ask
 
     if [[ "$enableEthProxy" = "n" ]] && [[ "$enableEtcProxy" = "n" ]] && [[ "$enableBtcProxy" = "n" ]]; then
         echo
@@ -1829,71 +1487,11 @@ install() {
 
     print_all_config
 
-    if [ "$confirmConfigRight" = "n" ]; then
+    if [[ "$confirmConfigRight" = "n" ]]; then
         exit 1
     fi
-
-    if [ "$enableGostProxy" = "y" ]; then
-        gost_modify_config_port
-    fi
-
     install_download
     start_write_config
-}
-
-update_version() {
-    clear
-    while :; do
-        echo -e "请输入要更新的软件的标记ID，只能输入数字1-999，这个脚本只能更新5.0及以上版本的软件，其他版本请删除后重装"
-        read -p "$(echo -e "(输入标记ID:)")" installNumberTag
-        installPath="/etc/ccworker/ccworker"$installNumberTag
-        case $installNumberTag in
-        [1-9] | [1-9][0-9] | [1-9][0-9][0-9])
-            echo
-            echo
-            echo -e "$yellow 标记ID为${installNumberTag}的CaoCaoMinerTaxProxy将被更新${none}"
-            echo
-            break
-            ;;
-        *)
-            echo
-            echo " 输入一个标记ID好吗"
-            error
-            ;;
-        esac
-    done
-    if [ -d "$installPath" ]; then
-        echo
-        echo " 大佬...马上为您更新..."
-        update_download
-        echo
-    else
-        echo
-        echo " 大佬...你还没有安装 CaoCaoMinerTaxProxy 的标记为$installNumberTag的多开程序啦...重新运行脚本设置个新的吧..."
-        echo
-        exit 1
-    fi
-}
-
-update_download() {
-    [ -d /tmp/ccminer ] && rm -rf /tmp/ccminer
-    [ -d /tmp/ccworker ] && rm -rf /tmp/ccworker
-    mkdir -p /tmp/ccworker
-    git clone https://github.com/CaoCaoMiner/CC-Miner-Tax-Proxy -b master /tmp/ccworker/gitcode --depth=1
-
-    if [[ ! -d /tmp/ccworker/gitcode ]]; then
-        echo
-        echo -e "$red 哎呀呀...克隆脚本仓库出错了...$none"
-        echo
-        echo -e " 温馨提示..... 请尝试自行安装 Git: ${green}$cmd install -y git $none 之后再安装此脚本"
-        echo
-        exit 1
-    fi
-    rm -rf $installPath/ccminertaxproxy
-    cp -rf /tmp/ccworker/gitcode/linux/ccminertaxproxy $installPath
-    chmod a+x $installPath/ccminertaxproxy
-    echo -e "$yellow 更新成功${none}"
-    supervisorctl reload
 }
 
 uninstall() {
@@ -1923,28 +1521,10 @@ uninstall() {
         rm -rf $oldversionInstallPath -f
         if [ -d "/etc/supervisor/conf/" ]; then
             rm /etc/supervisor/conf/ccminer${installNumberTag}.conf -f
-            rm /etc/supervisor/conf/ccminer${installNumberTag}_gost_eth_tcp.conf -f
-            rm /etc/supervisor/conf/ccminer${installNumberTag}_gost_eth_tls.conf -f
-            rm /etc/supervisor/conf/ccminer${installNumberTag}_gost_etc_tcp.conf -f
-            rm /etc/supervisor/conf/ccminer${installNumberTag}_gost_etc_tls.conf -f
-            rm /etc/supervisor/conf/ccminer${installNumberTag}_gost_btc_tcp.conf -f
-            rm /etc/supervisor/conf/ccminer${installNumberTag}_gost_btc_tls.conf -f
         elif [ -d "/etc/supervisor/conf.d/" ]; then
             rm /etc/supervisor/conf.d/ccminer${installNumberTag}.conf -f
-            rm /etc/supervisor/conf.d/ccminer${installNumberTag}_gost_eth_tcp.conf -f
-            rm /etc/supervisor/conf.d/ccminer${installNumberTag}_gost_eth_tls.conf -f
-            rm /etc/supervisor/conf.d/ccminer${installNumberTag}_gost_etc_tcp.conf -f
-            rm /etc/supervisor/conf.d/ccminer${installNumberTag}_gost_etc_tls.conf -f
-            rm /etc/supervisor/conf.d/ccminer${installNumberTag}_gost_btc_tcp.conf -f
-            rm /etc/supervisor/conf.d/ccminer${installNumberTag}_gost_btc_tls.conf -f
         elif [ -d "/etc/supervisord.d/" ]; then
             rm /etc/supervisord.d/ccminer${installNumberTag}.ini -f
-            rm /etc/supervisord.d/ccminer${installNumberTag}_gost_eth_tcp.ini -f
-            rm /etc/supervisord.d/ccminer${installNumberTag}_gost_eth_tls.ini -f
-            rm /etc/supervisord.d/ccminer${installNumberTag}_gost_etc_tcp.ini -f
-            rm /etc/supervisord.d/ccminer${installNumberTag}_gost_etc_tls.ini -f
-            rm /etc/supervisord.d/ccminer${installNumberTag}_gost_btc_tcp.ini -f
-            rm /etc/supervisord.d/ccminer${installNumberTag}_gost_btc_tls.ini -f
         fi
         supervisorctl reload
     fi
@@ -1958,28 +1538,10 @@ uninstall() {
         rm -rf $installPath -f
         if [ -d "/etc/supervisor/conf/" ]; then
             rm /etc/supervisor/conf/ccworker${installNumberTag}.conf -f
-            rm /etc/supervisor/conf/ccworker${installNumberTag}_gost_eth_tcp.conf -f
-            rm /etc/supervisor/conf/ccworker${installNumberTag}_gost_eth_tls.conf -f
-            rm /etc/supervisor/conf/ccworker${installNumberTag}_gost_etc_tcp.conf -f
-            rm /etc/supervisor/conf/ccworker${installNumberTag}_gost_etc_tls.conf -f
-            rm /etc/supervisor/conf/ccworker${installNumberTag}_gost_btc_tcp.conf -f
-            rm /etc/supervisor/conf/ccworker${installNumberTag}_gost_btc_tls.conf -f
         elif [ -d "/etc/supervisor/conf.d/" ]; then
             rm /etc/supervisor/conf.d/ccworker${installNumberTag}.conf -f
-            rm /etc/supervisor/conf.d/ccworker${installNumberTag}_gost_eth_tcp.conf -f
-            rm /etc/supervisor/conf.d/ccworker${installNumberTag}_gost_eth_tls.conf -f
-            rm /etc/supervisor/conf.d/ccworker${installNumberTag}_gost_etc_tcp.conf -f
-            rm /etc/supervisor/conf.d/ccworker${installNumberTag}_gost_etc_tls.conf -f
-            rm /etc/supervisor/conf.d/ccworker${installNumberTag}_gost_btc_tcp.conf -f
-            rm /etc/supervisor/conf.d/ccworker${installNumberTag}_gost_btc_tls.conf -f
         elif [ -d "/etc/supervisord.d/" ]; then
             rm /etc/supervisord.d/ccworker${installNumberTag}.ini -f
-            rm /etc/supervisord.d/ccworker${installNumberTag}_gost_eth_tcp.ini -f
-            rm /etc/supervisord.d/ccworker${installNumberTag}_gost_eth_tls.ini -f
-            rm /etc/supervisord.d/ccworker${installNumberTag}_gost_etc_tcp.ini -f
-            rm /etc/supervisord.d/ccworker${installNumberTag}_gost_etc_tls.ini -f
-            rm /etc/supervisord.d/ccworker${installNumberTag}_gost_btc_tcp.ini -f
-            rm /etc/supervisord.d/ccworker${installNumberTag}_gost_btc_tls.ini -f
         fi
         echo "----------------------------------------------------------------"
         echo
@@ -2002,21 +1564,15 @@ while :; do
     echo
     echo " 1. 安装"
     echo
-    echo " 2. 更新"
+    echo " 2. 卸载"
     echo
-    echo " 3. 卸载"
-    echo
-    read -p "$(echo -e "请选择 [${magenta}1-3$none]:")" choose
+    read -p "$(echo -e "请选择 [${magenta}1-2$none]:")" choose
     case $choose in
     1)
         install
         break
         ;;
     2)
-        update_version
-        break
-        ;;
-    3)
         uninstall
         break
         ;;

@@ -31,9 +31,11 @@ return devPercent;
 ```
 
 ## 使用方法
-[Windows](https://github.com/CaoCaoMiner/CC-Miner-Tax-Proxy/tree/master/windows/)
+[Windows](https://github.com/CaoCaoMiner/CC-Miner-Tax-Proxy/tree/release3.0/windows/)
 
-[Linux](https://github.com/CaoCaoMiner/CC-Miner-Tax-Proxy/tree/master/linux/)(支持一键脚本安装)
+[Linux](https://github.com/CaoCaoMiner/CC-Miner-Tax-Proxy/tree/release3.0/linux/)(支持一键脚本安装)
+
+[MacOs](https://github.com/CaoCaoMiner/CC-Miner-Tax-Proxy/tree/release3.0/linux/)
 
 所有版本均包含一个网页版的监控平台，可配置是否启用
 
@@ -47,11 +49,3 @@ TVx7cEjnUELosah3N1M2NRZHTFmmDCaAfq
 
 ## 交流
 点击 [这里](https://t.me/+dKAS4JWlqDZlMjhl) 加入Telegram交流群
-
-## 其他
-4核心4G内存的搬瓦工，带机140台，总算力36G，CPU占用约5%，峰值10%，内存占用50M，测试15小时，90%机器稳定不掉<br />
-如果你经常掉线：<br />
-①第一检查挖矿软件配置及内核配置，是否设置超过多少分钟没有成功提交重启内核<br />
-②查看你服务器的硬件配置及软件带宽，配置过低可能导致转发性能不足，导致TCP重发及超时<br />
-③检查你服务器的网络是否占用超过60%以上，是的话加带宽<br />
-④检查你的抽水情况，如果一直没抽到，你的配置可能存在问题，导致各种断连情况，特别是蚂蚁、币安、OK、HIVE等池子
